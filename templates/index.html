@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>与助手对话</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7fa;
+        }
+
+        .chat-container {
+            max-width: 800px;
+            margin: 50px auto;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            text-align: center;
+            color: #333;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: inline-block;
+            max-width: 90%;
+            word-wrap: break-word;
+        }
+
+        .user {
+            background-color: #007bff;
+            color: white;
+            text-align: right;
+        }
+
+        .assistant {
+            background-color: #e9ecef;
+            color: #495057;
+            text-align: left;
+        }
+
+        .input-container {
+            display: flex;
+            margin-top: 20px;
+        }
+
+        .input-container input {
+            flex-grow: 1;
+            padding: 15px;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            margin-right: 10px;
+        }
+
+        .input-container button {
+            padding: 15px;
+            font-size: 1.2rem;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        #chat-box {
+            max-height: 500px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding-right: 10px;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .reasoning {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 1rem;
+            border: 1px solid #ddd;
+            word-wrap: break-word;
+        }
+
+        .error {
+            color: red;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <h1>与助手对话</h1>
+    <div id="chat-box"></div>
+    <div class="input-container">
+        <input type="text" id="message-input" placeholder="请输入消息" />
+        <button onclick="sendMessage()">发送</button>
+    </div>
+    <div id="error-message" class="error"></div>
+    <div id="reasoning-box" class="reasoning" style="display: none;">
+        <h3>思考过程</h3>
+        <div id="reasoning-content"></div>
+    </div>
+</div>
+
+<script>
+    let messages = [];
+
+    // Display message function
+    function displayMessage(content, role) {
+        const chatBox = document.getElementById("chat-box");
+        const messageDiv = document.createElement("div");
+        messageDiv.classList.add("message");
+        messageDiv.classList.add(role);
+        messageDiv.innerText = content;
+        chatBox.appendChild(messageDiv);
+        chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the latest message
+    }
+
+    // Display reasoning content (think step)
+    function displayReasoning(reasoning) {
+        const reasoningBox = document.getElementById("reasoning-box");
+        const reasoningContent = document.getElementById("reasoning-content");
+        reasoningContent.innerHTML = reasoning;
+        reasoningBox.style.display = "block";  // Show reasoning box
+    }
+
+    // Send message to the backend
+    function sendMessage() {
+        const messageInput = document.getElementById("message-input");
+        const userMessage = messageInput.value;
+        if (!userMessage.trim()) return;
+
+        // Display user's message
+        displayMessage(userMessage, "user");
+        messages.push({ role: 'user', content: userMessage });
+
+        // Clear the input field
+        messageInput.value = "";
+
+        // Clear error message if any
+        document.getElementById("error-message").textContent = "";
+        document.getElementById("reasoning-box").style.display = "none"; // Hide reasoning box
+
+        // Send message to the server
+        fetch("/chat", {
+            method: "POST",
+            body: new URLSearchParams({
+                message: userMessage
+            }),
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                document.getElementById("error-message").textContent = "错误: " + data.error;
+            } else {
+                const assistantMessage = data.assistant_message;
+                displayMessage(assistantMessage, "assistant");
+
+                // Display reasoning process if available
+                if (data.reasoning_content) {
+                    displayReasoning(data.reasoning_content);
+                }
+            }
+        })
+        .catch(error => {
+            document.getElementById("error-message").textContent = "与服务器通信时发生错误。";
+        });
+    }
+</script>
+
+</body>
+</html>
+

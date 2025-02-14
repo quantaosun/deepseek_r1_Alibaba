@@ -12,6 +12,9 @@ client = OpenAI(
     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
 )
 
+# Max history length for each session
+MAX_HISTORY_LENGTH = 20
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -22,15 +25,19 @@ def chat():
 
     # Retrieve previous messages from the session or initialize if none exist
     if 'messages' not in session:
-        session['messages'] = [{'role': 'user', 'content': '你好'}]
+        session['messages'] = []
 
     # Add user message to conversation history
     session['messages'].append({'role': 'user', 'content': user_message})
 
+    # Automatically delete older messages if there are more than MAX_HISTORY_LENGTH
+    if len(session['messages']) > MAX_HISTORY_LENGTH:
+        session['messages'] = session['messages'][-MAX_HISTORY_LENGTH:]
+
     # Call the API with the entire conversation history
     try:
         completion = client.chat.completions.create(
-            model="deepseek-r1",  # Change model as needed
+            model="deepseek-r1",  # Use your DeepSeek R1 model
             messages=session['messages']
         )
 
